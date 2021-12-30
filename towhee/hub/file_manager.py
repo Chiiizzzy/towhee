@@ -20,7 +20,7 @@ from shutil import copy2, copytree, rmtree
 from towhee.utils.singleton import singleton
 from towhee.engine import DEFAULT_LOCAL_CACHE_ROOT
 from towhee.utils.log import engine_log
-from towhee.hub.hub_tools import download_repo
+from towhee.hub.hub_tools import download_repo, latest_branch_commit
 
 
 @singleton
@@ -36,7 +36,6 @@ class FileManagerConfig():
             The default cache to check in, if nothing supplied, the default cache of $HOME/.towhee
             will be used.
     """
-
     def __init__(self):
         # TODO: #1 Deal with specifying cache priority per pipeline?
         self._cache_paths = [DEFAULT_LOCAL_CACHE_ROOT]
@@ -214,7 +213,6 @@ class FileManager():
             Accepts an optional FileManager config, once a FileManagerConfig is selected,
             it cannot be changed for the current runtime.
     """
-
     def __init__(self, fmc: FileManagerConfig = FileManagerConfig()):
         self._config = fmc
         # TODO: #1 seperate ranking for different pipelines?
