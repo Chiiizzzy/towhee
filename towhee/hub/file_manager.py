@@ -17,10 +17,11 @@ from pathlib import Path
 from typing import Union, List
 from shutil import copy2, copytree, rmtree
 
+import git
 from towhee.utils.singleton import singleton
 from towhee.engine import DEFAULT_LOCAL_CACHE_ROOT
 from towhee.utils.log import engine_log
-from towhee.hub.hub_tools import download_repo, latest_branch_commit
+from towhee.hub.hub_tools import download_repo
 
 
 @singleton
@@ -226,12 +227,11 @@ class FileManager():
         try:
             file_name, file_type = name.split('.')
         except ValueError:
-            return name.replace('-', '_') + '&' + author + '$' + branch
-
+            return author + '/' + name.replace('-', '_') + '/' + branch
         # If pointing directly to pipeline or operator file.
         if file_type in ['py', 'yaml']:
-            return file_name.replace('-', '_') + '&' + author + '$' + branch
-        # If not pointing to a pipeline or operator file.
+            return author + '/' + file_name.replace('-', '_') + '/' + branch
+        # If not pointing to a pipeline or an operator file.
         else:
             raise ValueError('Unsupported file type.')
 
@@ -318,9 +318,21 @@ class FileManager():
             file_path = self._config.default_cache / 'pipelines' / pipeline_path
             found_existing = False
 
+            if redownload:
+                # TODO: filip-halt
+                # Error logging.
+                rmtree(file_path.parent)
+
             for path in self._config.cache_paths:
                 path = path / 'pipelines' / pipeline_path
                 if path.is_file():
+                    repo_path = str(path).rsplit('/', 1)[0]
+                    repo_name = str(path).rsplit('/', 1)[1].split('.')[0]
+                    repo = git.Repo(repo_path)
+                    if not 'Your branch is up to date' in repo.git.status():
+                        print(f'Your local pipeline {repo_name} is not up to date, updating to latest version...')
+                        fetch_head = repo.remote('origin').fetch(branch)
+                        repo.git.reset(fetch_head, '--hard')
                     file_path = path
                     found_existing = True
                     break
@@ -332,11 +344,6 @@ class FileManager():
                     engine_log.info('Local file not found, has it been imported?')
                     file_path = None
             else:
-                if redownload:
-                    # TODO: filip-halt
-                    # Error logging.
-                    rmtree(file_path.parent)
-
                 if not file_path.is_file():
                     download_repo(author, repo, branch, str(file_path.parent), install_reqs=install_reqs)
 
@@ -382,9 +389,21 @@ class FileManager():
             file_path = self._config.default_cache / 'operators' / operator_path
             found_existing = False
 
+            if redownload:
+                # TODO: filip-halt
+                # Error logging.
+                rmtree(file_path.parent)
+
             for path in self._config.cache_paths:
                 path = path / 'operators' / operator_path
                 if path.is_file():
+                    repo_path = str(path).rsplit('/', 1)[0]
+                    repo_name = str(path).rsplit('/', 1)[1].split('.')[0]
+                    repo = git.Repo(repo_path)
+                    if not 'Your branch is up to date' in repo.git.status():
+                        print(f'Your local operator {repo_name} is not up to date, updating to latest version...')
+                        fetch_head = repo.remote('origin').fetch(branch)
+                        repo.git.reset(fetch_head, '--hard')
                     file_path = path
                     found_existing = True
                     break
@@ -396,11 +415,6 @@ class FileManager():
                     engine_log.info('Local file not found, has it been imported?')
                     file_path = None
             else:
-                if redownload:
-                    # TODO: filip-halt
-                    # Error logging.
-                    rmtree(file_path.parent)
-
                 if file_path.is_file() is False:
                     download_repo(author, repo, branch, str(file_path.parent), install_reqs=install_reqs)
         return file_path

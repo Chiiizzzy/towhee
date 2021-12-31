@@ -27,11 +27,13 @@ from typing import List, Tuple
 from tqdm import tqdm
 from threading import Thread
 from getpass import getpass
+import git
 
 from tempfile import TemporaryFile
 from requests.auth import HTTPBasicAuth
 from requests.exceptions import HTTPError
-"""Repo Download related functions"""
+
+### Repo Download related functions
 
 
 class Worker(Thread):
@@ -308,13 +310,19 @@ def download_repo(author: str, repo: str, branch: str, local_dir: str, install_r
     if not exists(author, repo):
         raise ValueError(author + '/' + repo + ' repo doesnt exist.')
 
-    lfs_files = obtain_lfs_extensions(author, repo, branch)
-    commit = latest_branch_commit(author, repo, branch)
-    file_list = get_file_list(author, repo, commit)
-    download_files(author, repo, branch, file_list, lfs_files, local_dir, install_reqs)
+    # lfs_files = obtain_lfs_extensions(author, repo, branch)
+    # commit = latest_branch_commit(author, repo, branch)
+    # file_list = get_file_list(author, repo, commit)
+    # download_files(author, repo, branch, file_list, lfs_files, local_dir, install_reqs)
+    url = f'https://towhee.io/{author}/{repo}.git'
+    git.Repo.clone_from(url=url, to_path=local_dir, branch=branch)
+
+    if install_reqs:
+        if 'requirements.txt' in os.listdir(local_dir):
+            subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r', local_dir + '/requirements.txt'])
 
 
-"""Repo Creation related functions"""
+### Repo Creation related functions
 
 
 def create_token(author: str, password: str, token_name: str) -> Tuple[int, str]:
